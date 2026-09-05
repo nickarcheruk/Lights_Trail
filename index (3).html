@@ -1,0 +1,733 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Jeavons Wood PTA Christmas Lights Trail</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<link rel="stylesheet" href="https://unpkg.com/leaflet-routing-machine@3.2.12/dist/leaflet-routing-machine.css" />
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --night: #0F1B2E;
+    --night-deep: #0A1420;
+    --panel: #16243A;
+    --amber: #F2B84B;
+    --amber-soft: rgba(242,184,75,0.18);
+    --berry: #C1443C;
+    --pine: #6FAE81;
+    --snow: #F5F7FA;
+    --snow-dim: rgba(245,247,250,0.62);
+    --line: rgba(245,247,250,0.12);
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;height:100%;background:var(--night-deep);color:var(--snow);font-family:'Inter',sans-serif;}
+
+  .app{display:grid;grid-template-columns:400px 1fr;height:100vh;}
+  @media (max-width:900px){
+    .app{grid-template-columns:1fr; grid-template-rows:auto auto; height:auto;}
+    .panel{order:2;}
+    #map{order:1; height:56vh;}
+  }
+
+  .lights-string{
+    height:7px;
+    background-image: radial-gradient(circle, var(--amber) 42%, transparent 43%),
+                       radial-gradient(circle, var(--berry) 42%, transparent 43%),
+                       radial-gradient(circle, var(--pine) 42%, transparent 43%);
+    background-size: 66px 7px, 66px 7px, 66px 7px;
+    background-position: 0 0, 22px 0, 44px 0;
+    background-repeat: repeat-x;
+    opacity:0.85;
+    margin:2px 0 4px;
+  }
+
+  .snow{ position:fixed; inset:0; pointer-events:none; z-index:9999; overflow:hidden; }
+  .snowflake{
+    position:absolute; top:-5vh; color:rgba(245,247,250,0.85); user-select:none;
+    animation:fall linear infinite;
+  }
+  @keyframes fall{
+    from{ transform:translateY(0) translateX(0); }
+    to{ transform:translateY(110vh) translateX(var(--drift, 20px)); }
+  }
+  @media (prefers-reduced-motion: reduce){ .snowflake{ animation:none; display:none; } }
+
+  .panel{
+    background:var(--night);
+    border-right:1px solid var(--line);
+    padding:30px 26px;
+    display:flex;
+    flex-direction:column;
+    gap:20px;
+    overflow-y:auto;
+  }
+
+  .brand-mark{display:flex;align-items:center;gap:9px;}
+  .brand-mark span{font-weight:700;font-size:12px;letter-spacing:0.03em;color:var(--amber);}
+
+  h1{
+    font-family:'Fraunces', serif;
+    font-weight:600;
+    font-size:31px;
+    line-height:1.15;
+    margin:2px 0 0 0;
+    color:var(--snow);
+  }
+  h1 em{ font-style:normal; color:var(--amber); }
+
+  .lede{
+    font-size:14px;
+    line-height:1.65;
+    color:var(--snow-dim);
+    margin:0;
+  }
+
+  .donate{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:12px;
+    background:linear-gradient(135deg, rgba(193,68,60,0.22), rgba(242,184,75,0.14));
+    border:1px solid rgba(242,184,75,0.35);
+    border-radius:10px;
+    padding:14px 16px;
+  }
+  .donate p{margin:0;font-size:13px;line-height:1.5;color:var(--snow);}
+  .donate p b{color:var(--amber);}
+  .donate a{
+    background:var(--amber);
+    color:var(--night-deep);
+    text-decoration:none;
+    font-weight:700;
+    font-size:13px;
+    padding:9px 14px;
+    border-radius:7px;
+    white-space:nowrap;
+  }
+
+  .stat-row{display:flex;gap:20px;padding:14px 0;border-top:1px solid var(--line);border-bottom:1px solid var(--line);}
+  .stat{display:flex;flex-direction:column;gap:2px;}
+  .stat b{font-family:'Fraunces',serif;font-size:20px;font-weight:600;color:var(--amber);}
+  .stat span{font-size:11px;color:var(--snow-dim);}
+
+  label.field-label{font-size:12px;font-weight:600;color:var(--snow-dim);display:block;margin-bottom:7px;}
+  .address-row{display:flex;gap:8px;}
+  input[type=text]{
+    flex:1;
+    background:var(--panel);
+    border:1px solid var(--line);
+    border-radius:8px;
+    padding:11px 12px;
+    min-height:46px;
+    color:var(--snow);
+    font-size:16px;
+    font-family:'Inter';
+  }
+  input[type=text]::placeholder{color:rgba(245,247,250,0.35);}
+  input[type=text]:focus{outline:none;border-color:var(--amber);}
+  button.go{
+    background:var(--amber);
+    border:none;
+    color:var(--night-deep);
+    font-weight:700;
+    font-size:13px;
+    padding:0 18px;
+    min-height:46px;
+    min-width:60px;
+    border-radius:8px;
+    cursor:pointer;
+  }
+
+  .trail-head{display:flex;align-items:baseline;justify-content:space-between;gap:10px;flex-wrap:wrap;}
+  .trail-head h2{font-family:'Fraunces',serif;font-size:16px;font-weight:600;margin:0;color:var(--snow);}
+  .trail-head-actions{display:flex;gap:16px;align-items:center;}
+  .reset-link{background:none;border:none;color:var(--snow-dim);font-size:12px;text-decoration:underline;cursor:pointer;padding:6px 0;}
+  .reset-link:hover{color:var(--amber);}
+  #toggleList{display:none;}
+  @media (max-width:900px){ #toggleList{display:inline;} }
+
+  .house-list{display:flex;flex-direction:column;gap:6px;max-height:260px;overflow-y:auto;padding-right:4px;transition:max-height .25s ease;}
+  @media (max-width:900px){
+    .house-list{ max-height:0; overflow:hidden; }
+    .house-list.open{ max-height:280px; overflow-y:auto; }
+  }
+  .house-row{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    background:var(--panel);
+    border:1px solid var(--line);
+    border-radius:8px;
+    padding:11px 12px;
+    font-size:14px;
+  }
+  .house-row .street{color:var(--snow);}
+  .house-row .remove{
+    background:none;
+    border:none;
+    color:var(--snow-dim);
+    font-size:18px;
+    cursor:pointer;
+    line-height:1;
+    padding:6px 10px;
+    min-width:34px;
+    min-height:34px;
+  }
+  .house-row .remove:hover{color:var(--berry);}
+  .house-row.removed{opacity:0.4;}
+  .house-row.removed .street{text-decoration:line-through;}
+  .house-row .add-back{
+    background:none;border:none;color:var(--pine);font-size:12px;cursor:pointer;text-decoration:underline;padding:6px 0;
+  }
+
+  .gdpr-note{font-size:11.5px;line-height:1.55;color:var(--snow-dim);display:flex;gap:8px;align-items:flex-start;}
+  .gdpr-note svg{flex-shrink:0;margin-top:2px;}
+
+  .foot-note{
+    margin-top:auto;
+    padding-top:16px;
+    border-top:1px solid var(--line);
+    font-size:11.5px;
+    line-height:1.6;
+    color:var(--snow-dim);
+  }
+
+  #map{width:100%;height:100vh;background:var(--night-deep);}
+
+  .walk-section{
+    background:var(--panel);
+    border:1px solid var(--line);
+    border-radius:10px;
+    padding:16px;
+    display:flex;
+    flex-direction:column;
+    gap:12px;
+  }
+  .walk-section h2{font-family:'Fraunces',serif;font-size:16px;font-weight:600;margin:0;color:var(--snow);}
+  .walk-btn{
+    background:var(--pine);
+    border:none;
+    color:var(--night-deep);
+    font-weight:700;
+    font-size:14px;
+    padding:12px 16px;
+    min-height:46px;
+    border-radius:8px;
+    cursor:pointer;
+  }
+  .walk-btn.stopping{background:var(--berry); color:var(--snow);}
+  .walk-status{
+    font-size:13px;
+    color:var(--amber);
+    background:var(--amber-soft);
+    border-radius:8px;
+    padding:9px 11px;
+    display:none;
+  }
+  .walk-status.active{display:block;}
+
+  .gmaps-links{display:flex; flex-direction:column; gap:8px;}
+  .gmaps-btn{
+    display:flex; align-items:center; justify-content:center; gap:8px;
+    background:transparent;
+    border:1px solid rgba(242,184,75,0.4);
+    color:var(--amber);
+    text-decoration:none;
+    font-size:13px;
+    font-weight:600;
+    padding:10px 12px;
+    min-height:44px;
+    border-radius:8px;
+  }
+  .gmaps-btn:hover{background:var(--amber-soft);}
+  .gmaps-note{font-size:11.5px;color:var(--snow-dim);line-height:1.5;margin:0;}
+
+  .toast{
+    position:fixed; left:50%; bottom:26px; transform:translateX(-50%) translateY(20px);
+    background:var(--panel); border:1px solid rgba(242,184,75,0.4); color:var(--snow);
+    padding:12px 18px; border-radius:10px; font-size:13.5px; font-weight:600;
+    box-shadow:0 8px 24px rgba(0,0,0,0.4); z-index:10000;
+    opacity:0; transition:opacity .3s ease, transform .3s ease; pointer-events:none;
+  }
+  .toast.show{ opacity:1; transform:translateX(-50%) translateY(0); }
+
+  .user-dot{
+    width:16px;height:16px;border-radius:50%;
+    background:#3B82F6; border:3px solid #fff;
+    box-shadow:0 0 0 6px rgba(59,130,246,0.35);
+  }
+  .user-dot-pulse{
+    position:absolute; inset:-6px; border-radius:50%;
+    border:2px solid rgba(59,130,246,0.6);
+    animation:pulse 1.8s ease-out infinite;
+  }
+  @keyframes pulse{ 0%{transform:scale(0.6); opacity:1;} 100%{transform:scale(2.2); opacity:0;} }
+
+  .house-row.visited{opacity:0.5;}
+  .house-row.visited .street::after{content:" ✓"; color:var(--pine);}
+
+  .leaflet-popup-content-wrapper{background:var(--panel);color:var(--snow);border-radius:8px;}
+  .leaflet-popup-content{font-family:'Inter';font-size:13px;margin:10px 12px;}
+  .leaflet-popup-content b{font-family:'Fraunces',serif;font-size:15px;}
+  .leaflet-popup-tip{background:var(--panel);}
+  .leaflet-control-zoom a{background:var(--panel) !important; color:var(--snow) !important; border-color:var(--line) !important;}
+  .leaflet-routing-container{display:none;}
+</style>
+</head>
+<body>
+
+<div class="snow" id="snow"></div>
+<div class="toast" id="toast"></div>
+
+<div class="app">
+  <div class="panel">
+    <div class="brand-mark">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M12 2v5M12 17v5M4.2 4.2l3.5 3.5M16.3 16.3l3.5 3.5M2 12h5M17 12h5M4.2 19.8l3.5-3.5M16.3 7.7l3.5-3.5" stroke="#F2B84B" stroke-width="1.6" stroke-linecap="round"/><circle cx="12" cy="12" r="3" fill="#F2B84B"/></svg>
+      <span>JEAVONS WOOD PTA</span>
+    </div>
+    <div class="lights-string"></div>
+
+    <div>
+      <h1>The Christmas<br>Lights <em>Trail</em></h1>
+      <p class="lede">There's nothing quite like turning a corner and finding a whole house lit up for Christmas — kids pointing, breath fogging in the cold, that proper feeling that Christmas is nearly here. This year our neighbours have pulled out all the stops, and we've mapped every home taking part. Walk the whole trail, or just the bit near you — it's free, it's for everyone, and it raises money for our school.</p>
+    </div>
+
+    <div class="donate">
+      <p>Enjoyed the walk? <b>A small donation</b> goes straight to Jeavons Wood School.</p>
+      <a href="#" target="_blank">Donate</a>
+    </div>
+
+    <div class="stat-row">
+      <div class="stat"><b>34</b><span>homes taking part</span></div>
+      <div class="stat"><b>Free</b><span>to walk, every night</span></div>
+      <div class="stat"><b>Dec</b><span>lit through the month</span></div>
+    </div>
+
+    <div>
+      <label class="field-label">Start near your house</label>
+      <div class="address-row">
+        <input id="addr" type="text" placeholder="e.g. Aspen Grove">
+        <button class="go" id="findBtn">Go</button>
+      </div>
+    </div>
+
+    <div class="walk-section">
+      <h2>Walk the trail</h2>
+      <button class="walk-btn" id="walkBtn">▶ Start walking</button>
+      <div class="walk-status" id="walkStatus"></div>
+      <p class="gmaps-note">Prefer your phone's own sat nav? Open the same stops in Google Maps instead — voice directions, live rerouting, all of it.</p>
+      <div class="gmaps-links" id="gmapsLinks"></div>
+    </div>
+
+    <div>
+      <div class="trail-head">
+        <h2>Your trail</h2>
+        <div class="trail-head-actions">
+          <button class="reset-link" id="toggleList">Show list</button>
+          <button class="reset-link" id="resetBtn">Reset to full trail</button>
+        </div>
+      </div>
+      <p style="font-size:12px;color:var(--snow-dim);margin:6px 0 10px 0;">Too far to walk to one? Remove it and we'll redraw the route.</p>
+      <div class="house-list" id="houseList"></div>
+    </div>
+
+    <div class="gdpr-note">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" style="margin-top:2px;"><path d="M12 2 3 6v6c0 5 3.8 8.7 9 10 5.2-1.3 9-5 9-10V6l-9-4z" stroke="#F5F7FA" stroke-opacity="0.5" stroke-width="1.4"/></svg>
+      <span>To protect residents' privacy, we only ever show street names publicly — never house numbers. The pin still marks the right spot to stop and look.</span>
+    </div>
+
+    <div class="foot-note">
+      Want to add your own lights to next year's trail? Get in touch with the PTA committee.
+    </div>
+  </div>
+
+  <div id="map"></div>
+</div>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://unpkg.com/leaflet-routing-machine@3.2.12/dist/leaflet-routing-machine.js"></script>
+<script>
+  // ---- Live data source ----
+  // Publish the "Public" tab of your Sheet as CSV (File → Share → Publish to web → CSV)
+  // and paste that link below. Columns expected, in order: street, lat, lng
+  // IMPORTANT: this feed should only ever contain street/w3w + lat/lng —
+  // never the full address — even though the pin itself is exact.
+  const SHEET_CSV_URL = "PASTE_YOUR_PUBLISHED_CSV_LINK_HERE";
+
+  const CENTER = [53.7520, -2.9970];
+
+  // Used only if the CSV above isn't reachable (e.g. previewing this file offline)
+  const sampleLights = [
+    {id:1,  street:"Aspen Grove",   lat:53.7538, lng:-2.9995},
+    {id:2,  street:"Aspen Grove",   lat:53.7540, lng:-2.9989},
+    {id:3,  street:"Birchfield Road",  lat:53.7534, lng:-2.9978},
+    {id:4,  street:"Birchfield Road",  lat:53.7530, lng:-2.9970},
+    {id:5,  street:"Cedar Close",   lat:53.7525, lng:-2.9960},
+    {id:6,  street:"Cedar Close",    lat:53.7522, lng:-2.9952},
+    {id:7,  street:"Cedar Close",    lat:53.7518, lng:-2.9946},
+    {id:8,  street:"Elm Avenue",    lat:53.7514, lng:-2.9938},
+    {id:9,  street:"Fir Tree Lane",  lat:53.7545, lng:-2.9935},
+    {id:10, street:"Fir Tree Lane", lat:53.7550, lng:-2.9928},
+    {id:11, street:"Fir Tree Lane", lat:53.7554, lng:-2.9918},
+    {id:12, street:"Gorse Way",      lat:53.7548, lng:-2.9908},
+    {id:13, street:"Gorse Way",      lat:53.7542, lng:-2.9899},
+    {id:14, street:"Hazel Court",    lat:53.7536, lng:-2.9892},
+    {id:15, street:"Hazel Court",    lat:53.7529, lng:-2.9886},
+    {id:16, street:"Ivy Street",    lat:53.7522, lng:-2.9880},
+    {id:17, street:"Ivy Street",     lat:53.7515, lng:-2.9878},
+    {id:18, street:"Juniper Road",    lat:53.7508, lng:-2.9885},
+    {id:19, street:"Larch Street",  lat:53.7500, lng:-2.9900},
+    {id:20, street:"Larch Street",   lat:53.7494, lng:-2.9912},
+    {id:21, street:"Maple Drive",   lat:53.7490, lng:-2.9925},
+    {id:22, street:"Maple Drive",    lat:53.7495, lng:-2.9940},
+    {id:23, street:"Nutwood Avenue",   lat:53.7501, lng:-2.9955},
+    {id:24, street:"Nutwood Avenue",    lat:53.7507, lng:-2.9965},
+    {id:25, street:"Oakfield Road",   lat:53.7512, lng:-2.9980},
+    {id:26, street:"Oakfield Road",    lat:53.7505, lng:-2.9990},
+    {id:27, street:"Pine Walk",      lat:53.7498, lng:-2.9998},
+    {id:28, street:"Pine Walk",      lat:53.7492, lng:-3.0005},
+    {id:29, street:"Quince Lane",   lat:53.7486, lng:-3.0012},
+    {id:30, street:"Rowan Close",   lat:53.7480, lng:-3.0002},
+    {id:31, street:"Rowan Close",    lat:53.7477, lng:-2.9988},
+    {id:32, street:"Sycamore Street",   lat:53.7483, lng:-2.9975},
+    {id:33, street:"Sycamore Street",    lat:53.7489, lng:-2.9962},
+    {id:34, street:"Thistle Road",    lat:53.7495, lng:-2.9950}
+  ];
+
+  let lights = [];
+  let removedIds = new Set();
+
+  function parseCSV(text){
+    const lines = text.trim().split('\n');
+    // Skip header row, expect: street,lat,lng
+    return lines.slice(1).map((line, i) => {
+      const cols = line.split(',').map(c => c.trim().replace(/^"|"$/g, ''));
+      return { id: i + 1, street: cols[0], lat: parseFloat(cols[1]), lng: parseFloat(cols[2]) };
+    }).filter(l => l.street && !isNaN(l.lat) && !isNaN(l.lng));
+  }
+
+  async function loadLights(){
+    if(SHEET_CSV_URL.startsWith("PASTE_")){
+      lights = sampleLights;
+      return;
+    }
+    try{
+      const res = await fetch(SHEET_CSV_URL);
+      if(!res.ok) throw new Error('Sheet fetch failed');
+      const text = await res.text();
+      const parsed = parseCSV(text);
+      lights = parsed.length ? parsed : sampleLights;
+    }catch(err){
+      console.warn('Could not load live Sheet data, using sample data instead:', err);
+      lights = sampleLights;
+    }
+  }
+
+  const map = L.map('map', { zoomControl:true }).setView(CENTER, 15);
+  L.tileLayer('https://services.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}', {
+    attribution: 'Esri, HERE, Garmin, &copy; OpenStreetMap contributors',
+    maxZoom: 16
+  }).addTo(map);
+  L.tileLayer('https://services.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Reference/MapServer/tile/{z}/{y}/{x}', {
+    maxZoom: 16
+  }).addTo(map);
+
+  let markers = [];
+  let markersById = {};
+  let routingControl = null;
+  let visitedIds = new Set();
+
+  function activeLights(){
+    return lights.filter(l => !removedIds.has(l.id));
+  }
+
+  function clearMarkers(){ markers.forEach(m => map.removeLayer(m)); markers = []; markersById = {}; }
+  function clearRoute(){ if(routingControl){ map.removeControl(routingControl); routingControl = null; } }
+
+  function lightIcon(){
+    return L.divIcon({
+      className:'',
+      html:`<div style="width:14px;height:14px;border-radius:50%;background:#F2B84B;border:2px solid #0F1B2E;box-shadow:0 0 0 2px rgba(242,184,75,0.35);"></div>`,
+      iconSize:[14,14], iconAnchor:[7,7]
+    });
+  }
+
+  function visitedIcon(){
+    return L.divIcon({
+      className:'',
+      html:`<div style="width:14px;height:14px;border-radius:50%;background:#16243A;border:2px solid #6FAE81;display:flex;align-items:center;justify-content:center;color:#6FAE81;font-size:9px;line-height:1;">&#10003;</div>`,
+      iconSize:[14,14], iconAnchor:[7,7]
+    });
+  }
+
+  function userIcon(){
+    return L.divIcon({
+      className:'',
+      html:`<div style="position:relative;width:16px;height:16px;"><div class="user-dot-pulse"></div><div class="user-dot"></div></div>`,
+      iconSize:[16,16], iconAnchor:[8,8]
+    });
+  }
+
+  function distMeters(lat1,lng1,lat2,lng2){
+    const R = 6371000;
+    const toRad = d => d * Math.PI / 180;
+    const dLat = toRad(lat2 - lat1);
+    const dLng = toRad(lng2 - lng1);
+    const a = Math.sin(dLat/2)**2 + Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLng/2)**2;
+    return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  }
+
+  function showToast(msg){
+    const t = document.getElementById('toast');
+    t.textContent = msg;
+    t.classList.add('show');
+    clearTimeout(t._hideTimer);
+    t._hideTimer = setTimeout(() => t.classList.remove('show'), 3200);
+  }
+
+  function nearestNeighbourOrder(points){
+    if(points.length === 0) return points;
+    const remaining = [...points];
+    const ordered = [remaining.shift()];
+    while(remaining.length){
+      const last = ordered[ordered.length - 1];
+      let bestIdx = 0, bestDist = Infinity;
+      remaining.forEach((p, i) => {
+        const d = (p.lat-last.lat)**2 + (p.lng-last.lng)**2;
+        if(d < bestDist){ bestDist = d; bestIdx = i; }
+      });
+      ordered.push(remaining.splice(bestIdx,1)[0]);
+    }
+    return ordered;
+  }
+
+  function drawRoute(){
+    clearMarkers();
+    clearRoute();
+    const pts = activeLights();
+
+    pts.forEach(p => {
+      const m = L.marker([p.lat, p.lng], {icon: visitedIds.has(p.id) ? visitedIcon() : lightIcon()})
+        .addTo(map)
+        .bindPopup(`<b>${p.street}</b><br>lights up this way`);
+      markers.push(m);
+      markersById[p.id] = m;
+    });
+
+    renderGoogleMapsLinks(pts);
+
+    if(pts.length < 2) return;
+
+    const ordered = nearestNeighbourOrder(pts);
+    const waypoints = ordered.map(p => L.latLng(p.lat, p.lng));
+
+    routingControl = L.Routing.control({
+      waypoints: waypoints,
+      router: L.Routing.osrmv1({ serviceUrl: 'https://router.project-osrm.org/route/v1', profile: 'foot' }),
+      lineOptions: { styles: [{color: '#F2B84B', opacity: 0.9, weight: 4}] },
+      addWaypoints: false,
+      draggableWaypoints: false,
+      fitSelectedRoutes: true,
+      show: false,
+      createMarker: () => null
+    }).addTo(map);
+  }
+
+  // ---- Google Maps handoff ----
+  // Google's consumer directions link gets unreliable much beyond ~10 stops total,
+  // so a big trail is split into continuous legs rather than one link that might drop houses.
+  function buildGoogleMapsLinks(orderedPoints){
+    const MAX_PER_LEG = 10;
+    const links = [];
+    let start = 0;
+    while(start < orderedPoints.length - 1){
+      const end = Math.min(start + MAX_PER_LEG - 1, orderedPoints.length - 1);
+      const leg = orderedPoints.slice(start, end + 1);
+      const origin = leg[0];
+      const destination = leg[leg.length - 1];
+      const waypoints = leg.slice(1, -1);
+      let url = `https://www.google.com/maps/dir/?api=1&origin=${origin.lat},${origin.lng}&destination=${destination.lat},${destination.lng}&travelmode=walking&dir_action=navigate`;
+      if(waypoints.length) url += `&waypoints=${waypoints.map(p => `${p.lat},${p.lng}`).join('|')}`;
+      links.push(url);
+      start = end;
+    }
+    return links;
+  }
+
+  function renderGoogleMapsLinks(pts){
+    const container = document.getElementById('gmapsLinks');
+    container.innerHTML = '';
+    if(pts.length < 2){
+      container.innerHTML = '<p class="gmaps-note">Add at least two houses to your trail to open it in Google Maps.</p>';
+      return;
+    }
+    const ordered = nearestNeighbourOrder(pts);
+    const links = buildGoogleMapsLinks(ordered);
+    links.forEach((url, i) => {
+      const a = document.createElement('a');
+      a.href = url;
+      a.target = '_blank';
+      a.rel = 'noopener';
+      a.className = 'gmaps-btn';
+      a.textContent = links.length > 1 ? `Open Leg ${i+1} of ${links.length} in Google Maps` : 'Open in Google Maps';
+      container.appendChild(a);
+    });
+  }
+
+  function renderHouseList(){
+    const list = document.getElementById('houseList');
+    list.innerHTML = '';
+    lights.forEach(l => {
+      const row = document.createElement('div');
+      const visited = visitedIds.has(l.id) && !removedIds.has(l.id);
+      row.className = 'house-row' + (removedIds.has(l.id) ? ' removed' : '') + (visited ? ' visited' : '');
+      row.innerHTML = removedIds.has(l.id)
+        ? `<span class="street">${l.street}</span><button class="add-back" data-id="${l.id}">add back</button>`
+        : `<span class="street">${l.street}</span><button class="remove" data-id="${l.id}" title="Remove from my trail">&times;</button>`;
+      list.appendChild(row);
+    });
+
+    list.querySelectorAll('.remove').forEach(btn => {
+      btn.addEventListener('click', () => {
+        removedIds.add(Number(btn.dataset.id));
+        renderHouseList();
+        drawRoute();
+      });
+    });
+    list.querySelectorAll('.add-back').forEach(btn => {
+      btn.addEventListener('click', () => {
+        removedIds.delete(Number(btn.dataset.id));
+        renderHouseList();
+        drawRoute();
+      });
+    });
+  }
+
+  document.getElementById('resetBtn').addEventListener('click', () => {
+    removedIds.clear();
+    renderHouseList();
+    drawRoute();
+  });
+
+  const toggleListBtn = document.getElementById('toggleList');
+  toggleListBtn.addEventListener('click', () => {
+    const el = document.getElementById('houseList');
+    el.classList.toggle('open');
+    toggleListBtn.textContent = el.classList.contains('open') ? 'Hide list' : 'Show list';
+  });
+
+  document.getElementById('findBtn').addEventListener('click', () => {
+    // Prototype behaviour: re-centres on the sample area.
+    // Real build: geocode the typed street with a free geocoder and fly there.
+    map.flyTo(CENTER, 15.3, { duration: 1.1 });
+  });
+
+  // ---- Walking mode: live location following + proximity check-off ----
+  let walking = false;
+  let watchId = null;
+  let userMarker = null;
+
+  const walkBtn = document.getElementById('walkBtn');
+  const walkStatus = document.getElementById('walkStatus');
+
+  walkBtn.addEventListener('click', () => { walking ? stopWalking() : startWalking(); });
+
+  function startWalking(){
+    if(!navigator.geolocation){
+      showToast('This browser can\'t share your location — try Chrome or Safari.');
+      return;
+    }
+    walking = true;
+    visitedIds.clear();
+    walkBtn.textContent = '■ Stop walking';
+    walkBtn.classList.add('stopping');
+    walkStatus.classList.add('active');
+    walkStatus.textContent = 'Finding your location…';
+    drawRoute();
+
+    watchId = navigator.geolocation.watchPosition(onPosition, onGeoError, {
+      enableHighAccuracy: true, maximumAge: 5000, timeout: 15000
+    });
+  }
+
+  function stopWalking(){
+    walking = false;
+    if(watchId !== null) navigator.geolocation.clearWatch(watchId);
+    watchId = null;
+    walkBtn.textContent = '▶ Start walking';
+    walkBtn.classList.remove('stopping');
+    walkStatus.classList.remove('active');
+    if(userMarker){ map.removeLayer(userMarker); userMarker = null; }
+  }
+
+  function onGeoError(){
+    showToast('Could not get your location — check this site has location permission.');
+    stopWalking();
+  }
+
+  function onPosition(pos){
+    const { latitude, longitude } = pos.coords;
+
+    if(!userMarker){
+      userMarker = L.marker([latitude, longitude], { icon: userIcon(), zIndexOffset: 1000 }).addTo(map);
+      map.setView([latitude, longitude], 17);
+    } else {
+      userMarker.setLatLng([latitude, longitude]);
+      map.panTo([latitude, longitude]);
+    }
+
+    const remaining = activeLights().filter(l => !visitedIds.has(l.id));
+    if(remaining.length === 0){
+      walkStatus.textContent = "🎄 That's every house on your trail — well walked!";
+      return;
+    }
+
+    let nearest = remaining[0], nearestDist = Infinity;
+    remaining.forEach(l => {
+      const d = distMeters(latitude, longitude, l.lat, l.lng);
+      if(d < nearestDist){ nearestDist = d; nearest = l; }
+    });
+
+    walkStatus.textContent = `Next: ${nearest.street} — ${Math.round(nearestDist)}m away`;
+
+    if(nearestDist < 25){
+      visitedIds.add(nearest.id);
+      showToast(`🎄 You found the lights at ${nearest.street}!`);
+      renderHouseList();
+      if(markersById[nearest.id]) markersById[nearest.id].setIcon(visitedIcon());
+    }
+  }
+
+  // ---- Falling snow ----
+  function makeSnow(){
+    const container = document.getElementById('snow');
+    const count = window.innerWidth < 700 ? 22 : 40;
+    for(let i=0; i<count; i++){
+      const flake = document.createElement('span');
+      flake.className = 'snowflake';
+      flake.textContent = Math.random() > 0.5 ? '❆' : '❅';
+      const size = 8 + Math.random() * 14;
+      const left = Math.random() * 100;
+      const duration = 8 + Math.random() * 10;
+      const delay = Math.random() * -20;
+      const drift = (Math.random() * 60 - 30) + 'px';
+      flake.style.left = left + 'vw';
+      flake.style.fontSize = size + 'px';
+      flake.style.opacity = 0.4 + Math.random() * 0.5;
+      flake.style.animationDuration = duration + 's';
+      flake.style.animationDelay = delay + 's';
+      flake.style.setProperty('--drift', drift);
+      container.appendChild(flake);
+    }
+  }
+  makeSnow();
+
+  loadLights().then(() => {
+    renderHouseList();
+    drawRoute();
+  });
+</script>
+
+</body>
+</html>

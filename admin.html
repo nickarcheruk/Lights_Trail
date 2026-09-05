@@ -1,0 +1,273 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Admin — Jeavons Wood Lights Trail</title>
+<style>
+  :root{
+    --bg: #F4F5F7;
+    --surface: #FFFFFF;
+    --border: #D8DCE2;
+    --ink: #1C2128;
+    --ink-dim: #6B7280;
+    --accent: #2454C7;
+    --warn: #B23B3B;
+    --good: #1E8E5A;
+    --pending-bg: #FFF4E0;
+    --pending-ink: #92620B;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0; background:var(--bg); color:var(--ink);
+    font-family:-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    font-size:14px;
+  }
+  .topbar{
+    background:var(--ink); color:#fff;
+    padding:12px 24px;
+    display:flex; align-items:center; justify-content:space-between;
+  }
+  .topbar .title{font-weight:600; font-size:13.5px;}
+  .topbar .warn-tag{
+    background:var(--warn); color:#fff; font-size:11px; font-weight:600;
+    padding:3px 9px; border-radius:4px; letter-spacing:0.02em;
+  }
+  .wrap{max-width:1080px; margin:0 auto; padding:28px 24px 60px;}
+
+  .callout{
+    background:#FFF; border:1px solid var(--border); border-left:4px solid var(--accent);
+    padding:14px 16px; border-radius:4px; font-size:12.5px; line-height:1.6; color:var(--ink-dim);
+    margin-bottom:24px;
+  }
+  .callout b{color:var(--ink);}
+
+  h1{font-size:19px; font-weight:600; margin:0 0 4px 0;}
+  .subtitle{font-size:12.5px; color:var(--ink-dim); margin:0 0 22px 0;}
+
+  .toolbar{display:flex; gap:10px; margin-bottom:14px; flex-wrap:wrap; align-items:center; justify-content:space-between;}
+  .toolbar .left{display:flex; gap:8px;}
+  .filter-btn{
+    background:#fff; border:1px solid var(--border); border-radius:5px;
+    padding:6px 12px; font-size:12.5px; cursor:pointer; color:var(--ink-dim);
+  }
+  .filter-btn.active{background:var(--ink); color:#fff; border-color:var(--ink);}
+  .add-btn{
+    background:var(--accent); color:#fff; border:none; border-radius:5px;
+    padding:8px 14px; font-size:12.5px; font-weight:600; cursor:pointer;
+  }
+
+  table{width:100%; border-collapse:collapse; background:var(--surface); border:1px solid var(--border); border-radius:6px; overflow:hidden;}
+  th{
+    text-align:left; font-size:11px; text-transform:uppercase; letter-spacing:0.03em;
+    color:var(--ink-dim); font-weight:600; padding:10px 14px; background:#FAFAFB; border-bottom:1px solid var(--border);
+  }
+  td{padding:10px 14px; border-bottom:1px solid var(--border); font-size:13px; vertical-align:middle;}
+  tr:last-child td{border-bottom:none;}
+  .mono{font-family:ui-monospace,SFMono-Regular,Menlo,monospace; font-size:12px; color:var(--ink-dim);}
+  .full-addr{font-weight:600;}
+  .street-preview{color:var(--ink-dim); font-size:12px;}
+
+  .status-pill{
+    display:inline-block; font-size:11px; font-weight:600; padding:3px 9px; border-radius:20px;
+  }
+  .status-pill.pending{background:var(--pending-bg); color:var(--pending-ink);}
+  .status-pill.approved{background:#E3F3EA; color:var(--good);}
+
+  .row-actions{display:flex; gap:6px;}
+  .row-actions button{
+    border:1px solid var(--border); background:#fff; border-radius:4px; padding:5px 10px;
+    font-size:11.5px; cursor:pointer; color:var(--ink);
+  }
+  .row-actions button.approve{border-color:var(--good); color:var(--good);}
+  .row-actions button.remove{border-color:var(--warn); color:var(--warn);}
+
+  .add-form{
+    background:var(--surface); border:1px solid var(--border); border-radius:6px;
+    padding:18px 20px; margin-bottom:20px; display:none;
+  }
+  .add-form.open{display:block;}
+  .add-form h3{margin:0 0 12px 0; font-size:13.5px;}
+  .form-grid{display:grid; grid-template-columns:1fr 1fr 1fr; gap:10px; margin-bottom:12px;}
+  .form-grid label{font-size:11px; color:var(--ink-dim); display:block; margin-bottom:4px;}
+  .form-grid input{
+    width:100%; padding:8px 9px; border:1px solid var(--border); border-radius:4px; font-size:13px;
+  }
+  .form-actions{display:flex; gap:8px;}
+  .form-actions .save{background:var(--ink); color:#fff; border:none; border-radius:4px; padding:8px 14px; font-size:12.5px; cursor:pointer;}
+  .form-actions .cancel{background:#fff; border:1px solid var(--border); border-radius:4px; padding:8px 14px; font-size:12.5px; cursor:pointer;}
+
+  .footnote{margin-top:20px; font-size:11.5px; color:var(--ink-dim); line-height:1.6;}
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <span class="title">JEAVONS WOOD PTA — LIGHTS TRAIL ADMIN</span>
+  <span class="warn-tag">INTERNAL — DO NOT SHARE THIS LINK</span>
+</div>
+
+<div class="wrap">
+
+  <div class="callout">
+    <b>Prototype note:</b> this page demonstrates the review workflow on sample data and resets on refresh.
+    In the real build, this needs to read from and write to your submissions Google Sheet (via a small Apps Script
+    endpoint) so the public site and this admin view share one source of truth. Only <b>street name + map
+    coordinates</b> should ever leave this admin view for the public site — the full address stays here.
+  </div>
+
+  <h1>Submissions</h1>
+  <p class="subtitle">34 sample entries · review, approve, and publish to the public trail</p>
+
+  <div class="toolbar">
+    <div class="left">
+      <button class="filter-btn active" data-filter="all">All (34)</button>
+      <button class="filter-btn" data-filter="pending">Pending (6)</button>
+      <button class="filter-btn" data-filter="approved">Approved (28)</button>
+    </div>
+    <button class="add-btn" id="addToggle">+ Add submission</button>
+  </div>
+
+  <div class="add-form" id="addForm">
+    <h3>Add a new submission</h3>
+    <div class="form-grid">
+      <div><label>Full address (private)</label><input type="text" id="newAddr" placeholder="14 Aspen Grove"></div>
+      <div><label>Latitude</label><input type="text" id="newLat" placeholder="53.7538"></div>
+      <div><label>Longitude</label><input type="text" id="newLng" placeholder="-2.9995"></div>
+    </div>
+    <div class="form-actions">
+      <button class="save" id="saveNew">Save as pending</button>
+      <button class="cancel" id="cancelNew">Cancel</button>
+    </div>
+  </div>
+
+  <table>
+    <thead>
+      <tr>
+        <th>Full address (private)</th>
+        <th>Public label</th>
+        <th>Coordinates</th>
+        <th>Status</th>
+        <th>Actions</th>
+      </tr>
+    </thead>
+    <tbody id="rows"></tbody>
+  </table>
+
+  <p class="footnote">
+    Approved entries are the only ones included in the file published to the public site.
+    Removing a submission here does not contact the resident — do that separately if needed.
+  </p>
+
+</div>
+
+<script>
+  const sample = [
+    {addr:"12 Aspen Grove", lat:53.7538, lng:-2.9995, status:"approved"},
+    {addr:"14 Aspen Grove", lat:53.7540, lng:-2.9989, status:"approved"},
+    {addr:"3 Birchfield Road", lat:53.7534, lng:-2.9978, status:"approved"},
+    {addr:"7 Birchfield Road", lat:53.7530, lng:-2.9970, status:"pending"},
+    {addr:"22 Cedar Close", lat:53.7525, lng:-2.9960, status:"approved"},
+    {addr:"1 Cedar Close", lat:53.7522, lng:-2.9952, status:"approved"},
+    {addr:"9 Cedar Close", lat:53.7518, lng:-2.9946, status:"pending"},
+    {addr:"16 Elm Avenue", lat:53.7514, lng:-2.9938, status:"approved"},
+    {addr:"2 Fir Tree Lane", lat:53.7545, lng:-2.9935, status:"approved"},
+    {addr:"5 Fir Tree Lane", lat:53.7550, lng:-2.9928, status:"approved"},
+    {addr:"11 Fir Tree Lane", lat:53.7554, lng:-2.9918, status:"pending"},
+    {addr:"4 Gorse Way", lat:53.7548, lng:-2.9908, status:"approved"},
+    {addr:"8 Gorse Way", lat:53.7542, lng:-2.9899, status:"approved"},
+    {addr:"1 Hazel Court", lat:53.7536, lng:-2.9892, status:"approved"},
+    {addr:"6 Hazel Court", lat:53.7529, lng:-2.9886, status:"pending"},
+    {addr:"19 Ivy Street", lat:53.7522, lng:-2.9880, status:"approved"},
+    {addr:"3 Ivy Street", lat:53.7515, lng:-2.9878, status:"approved"},
+    {addr:"27 Juniper Road", lat:53.7508, lng:-2.9885, status:"approved"},
+    {addr:"14 Larch Street", lat:53.7500, lng:-2.9900, status:"approved"},
+    {addr:"8 Larch Street", lat:53.7494, lng:-2.9912, status:"approved"},
+    {addr:"22 Maple Drive", lat:53.7490, lng:-2.9925, status:"pending"},
+    {addr:"5 Maple Drive", lat:53.7495, lng:-2.9940, status:"approved"},
+    {addr:"11 Nutwood Avenue", lat:53.7501, lng:-2.9955, status:"approved"},
+    {addr:"3 Nutwood Avenue", lat:53.7507, lng:-2.9965, status:"approved"},
+    {addr:"17 Oakfield Road", lat:53.7512, lng:-2.9980, status:"approved"},
+    {addr:"9 Oakfield Road", lat:53.7505, lng:-2.9990, status:"approved"},
+    {addr:"2 Pine Walk", lat:53.7498, lng:-2.9998, status:"approved"},
+    {addr:"6 Pine Walk", lat:53.7492, lng:-3.0005, status:"approved"},
+    {addr:"13 Quince Lane", lat:53.7486, lng:-3.0012, status:"approved"},
+    {addr:"20 Rowan Close", lat:53.7480, lng:-3.0002, status:"approved"},
+    {addr:"4 Rowan Close", lat:53.7477, lng:-2.9988, status:"approved"},
+    {addr:"18 Sycamore Street", lat:53.7483, lng:-2.9975, status:"approved"},
+    {addr:"1 Sycamore Street", lat:53.7489, lng:-2.9962, status:"approved"},
+    {addr:"25 Thistle Road", lat:53.7495, lng:-2.9950, status:"approved"}
+  ];
+
+  let data = [...sample];
+  let currentFilter = "all";
+
+  function streetOnly(addr){
+    return addr.replace(/^\d+\s*/, '');
+  }
+
+  function render(){
+    const tbody = document.getElementById('rows');
+    tbody.innerHTML = '';
+    const filtered = data.filter(d => currentFilter === 'all' ? true : d.status === currentFilter);
+
+    filtered.forEach((d, i) => {
+      const realIndex = data.indexOf(d);
+      const tr = document.createElement('tr');
+      tr.innerHTML = `
+        <td class="full-addr">${d.addr}</td>
+        <td class="street-preview">${streetOnly(d.addr)}</td>
+        <td class="mono">${d.lat}, ${d.lng}</td>
+        <td><span class="status-pill ${d.status}">${d.status}</span></td>
+        <td class="row-actions">
+          ${d.status === 'pending' ? `<button class="approve" data-i="${realIndex}">Approve</button>` : `<button data-i="${realIndex}" class="unapprove">Unapprove</button>`}
+          <button class="remove" data-i="${realIndex}">Remove</button>
+        </td>
+      `;
+      tbody.appendChild(tr);
+    });
+
+    tbody.querySelectorAll('.approve').forEach(btn => {
+      btn.addEventListener('click', () => { data[btn.dataset.i].status = 'approved'; render(); });
+    });
+    tbody.querySelectorAll('.unapprove').forEach(btn => {
+      btn.addEventListener('click', () => { data[btn.dataset.i].status = 'pending'; render(); });
+    });
+    tbody.querySelectorAll('.remove').forEach(btn => {
+      btn.addEventListener('click', () => { data.splice(btn.dataset.i,1); render(); });
+    });
+  }
+
+  document.querySelectorAll('.filter-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      currentFilter = btn.dataset.filter;
+      render();
+    });
+  });
+
+  document.getElementById('addToggle').addEventListener('click', () => {
+    document.getElementById('addForm').classList.toggle('open');
+  });
+  document.getElementById('cancelNew').addEventListener('click', () => {
+    document.getElementById('addForm').classList.remove('open');
+  });
+  document.getElementById('saveNew').addEventListener('click', () => {
+    const addr = document.getElementById('newAddr').value.trim();
+    const lat = parseFloat(document.getElementById('newLat').value);
+    const lng = parseFloat(document.getElementById('newLng').value);
+    if(!addr || isNaN(lat) || isNaN(lng)){ alert('Fill in address, latitude and longitude.'); return; }
+    data.push({addr, lat, lng, status:'pending'});
+    document.getElementById('newAddr').value = '';
+    document.getElementById('newLat').value = '';
+    document.getElementById('newLng').value = '';
+    document.getElementById('addForm').classList.remove('open');
+    render();
+  });
+
+  render();
+</script>
+
+</body>
+</html>
