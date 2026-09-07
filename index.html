@@ -4,8 +4,8 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Jeavons Wood PTA Christmas Lights Trail</title>
-<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-<link rel="stylesheet" href="https://unpkg.com/leaflet-routing-machine@3.2.12/dist/leaflet-routing-machine.css" />
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css" />
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet-routing-machine@3.2.12/dist/leaflet-routing-machine.css" />
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
   :root{
@@ -21,13 +21,15 @@
     --line: rgba(245,247,250,0.12);
   }
   *{box-sizing:border-box;}
-  html,body{margin:0;padding:0;height:100%;background:var(--night-deep);color:var(--snow);font-family:'Inter',sans-serif;}
+  html,body{margin:0;padding:0;min-height:100%;background:var(--night-deep);color:var(--snow);font-family:'Inter',sans-serif;}
 
-  .app{display:grid;grid-template-columns:400px 1fr;height:100vh;}
-  @media (max-width:900px){
-    .app{grid-template-columns:1fr; grid-template-rows:auto auto; height:auto;}
-    .panel{order:2;}
-    #map{order:1; height:56vh;}
+  .page{
+    max-width:640px;
+    margin:0 auto;
+    padding:26px 20px 60px;
+    display:flex;
+    flex-direction:column;
+    gap:20px;
   }
 
   .lights-string{
@@ -53,23 +55,13 @@
   }
   @media (prefers-reduced-motion: reduce){ .snowflake{ animation:none; display:none; } }
 
-  .panel{
-    background:var(--night);
-    border-right:1px solid var(--line);
-    padding:30px 26px;
-    display:flex;
-    flex-direction:column;
-    gap:20px;
-    overflow-y:auto;
-  }
-
   .brand-mark{display:flex;align-items:center;gap:9px;}
   .brand-mark span{font-weight:700;font-size:12px;letter-spacing:0.03em;color:var(--amber);}
 
   h1{
     font-family:'Fraunces', serif;
     font-weight:600;
-    font-size:31px;
+    font-size:29px;
     line-height:1.15;
     margin:2px 0 0 0;
     color:var(--snow);
@@ -83,6 +75,95 @@
     margin:0;
   }
 
+  /* ---- Map preview / expand ---- */
+  .map-card{
+    position:relative;
+    height:260px;
+    border-radius:14px;
+    overflow:hidden;
+    border:1px solid var(--line);
+    background:var(--night-deep);
+  }
+  .map-card.expanded{
+    position:fixed;
+    inset:0;
+    z-index:9998;
+    height:100vh;
+    border-radius:0;
+    border:none;
+  }
+  .map-card #map{ width:100%; height:100%; }
+  .map-expand-btn{
+    position:absolute; top:10px; right:10px; z-index:1000;
+    background:var(--panel); color:var(--snow); border:1px solid var(--line);
+    border-radius:8px; padding:8px 11px; font-size:12px; font-weight:600; cursor:pointer;
+  }
+
+  /* ---- Primary directions CTA ---- */
+  .primary-cta{
+    display:block;
+    text-align:center;
+    background:var(--amber);
+    color:var(--night-deep);
+    font-weight:800;
+    font-size:16px;
+    padding:17px;
+    min-height:46px;
+    border-radius:10px;
+    text-decoration:none;
+  }
+  .cta-sub{ font-size:12px; color:var(--snow-dim); text-align:center; margin:8px 0 0; }
+  .more-legs{ display:flex; flex-direction:column; gap:8px; margin-top:10px; }
+
+  .gmaps-btn{
+    display:flex; align-items:center; justify-content:center; gap:8px;
+    background:transparent;
+    border:1px solid rgba(242,184,75,0.4);
+    color:var(--amber);
+    text-decoration:none;
+    font-size:13px;
+    font-weight:600;
+    padding:10px 12px;
+    min-height:44px;
+    border-radius:8px;
+  }
+  .gmaps-btn:hover{background:var(--amber-soft);}
+  .gmaps-note{font-size:12px;color:var(--snow-dim);line-height:1.5;margin:0 0 10px;}
+
+  /* ---- Walking mode ---- */
+  .walk-section{
+    background:var(--panel);
+    border:1px solid var(--line);
+    border-radius:10px;
+    padding:16px;
+    display:flex;
+    flex-direction:column;
+    gap:10px;
+  }
+  .walk-section h2{font-family:'Fraunces',serif;font-size:16px;font-weight:600;margin:0;color:var(--snow);}
+  .walk-btn{
+    background:var(--pine);
+    border:none;
+    color:var(--night-deep);
+    font-weight:700;
+    font-size:14px;
+    padding:12px 16px;
+    min-height:46px;
+    border-radius:8px;
+    cursor:pointer;
+  }
+  .walk-btn.stopping{background:var(--berry); color:var(--snow);}
+  .walk-status{
+    font-size:13px;
+    color:var(--amber);
+    background:var(--amber-soft);
+    border-radius:8px;
+    padding:9px 11px;
+    display:none;
+  }
+  .walk-status.active{display:block;}
+
+  /* ---- Donate + stats ---- */
   .donate{
     display:flex;
     align-items:center;
@@ -111,6 +192,7 @@
   .stat b{font-family:'Fraunces',serif;font-size:20px;font-weight:600;color:var(--amber);}
   .stat span{font-size:11px;color:var(--snow-dim);}
 
+  /* ---- Address field ---- */
   label.field-label{font-size:12px;font-weight:600;color:var(--snow-dim);display:block;margin-bottom:7px;}
   .address-row{display:flex;gap:8px;}
   input[type=text]{
@@ -139,109 +221,56 @@
     cursor:pointer;
   }
 
+  /* ---- Route list (main content) ---- */
   .trail-head{display:flex;align-items:baseline;justify-content:space-between;gap:10px;flex-wrap:wrap;}
   .trail-head h2{font-family:'Fraunces',serif;font-size:16px;font-weight:600;margin:0;color:var(--snow);}
-  .trail-head-actions{display:flex;gap:16px;align-items:center;}
   .reset-link{background:none;border:none;color:var(--snow-dim);font-size:12px;text-decoration:underline;cursor:pointer;padding:6px 0;}
   .reset-link:hover{color:var(--amber);}
-  #toggleList{display:none;}
-  @media (max-width:900px){ #toggleList{display:inline;} }
 
-  .house-list{display:flex;flex-direction:column;gap:6px;max-height:260px;overflow-y:auto;padding-right:4px;transition:max-height .25s ease;}
-  @media (max-width:900px){
-    .house-list{ max-height:0; overflow:hidden; }
-    .house-list.open{ max-height:280px; overflow-y:auto; }
-  }
-  .house-row{
+  .route-list{display:flex;flex-direction:column;}
+  .route-row{
     display:flex;
     align-items:center;
-    justify-content:space-between;
+    gap:11px;
     background:var(--panel);
     border:1px solid var(--line);
     border-radius:8px;
     padding:11px 12px;
     font-size:14px;
   }
-  .house-row .street{color:var(--snow);}
-  .house-row .remove{
-    background:none;
-    border:none;
-    color:var(--snow-dim);
-    font-size:18px;
-    cursor:pointer;
-    line-height:1;
-    padding:6px 10px;
-    min-width:34px;
-    min-height:34px;
+  .route-num{
+    width:22px;height:22px;border-radius:50%;flex-shrink:0;
+    background:var(--amber-soft); color:var(--amber);
+    display:flex;align-items:center;justify-content:center;
+    font-size:11.5px;font-weight:700;
   }
-  .house-row .remove:hover{color:var(--berry);}
-  .house-row.removed{opacity:0.4;}
-  .house-row.removed .street{text-decoration:line-through;}
-  .house-row .add-back{
-    background:none;border:none;color:var(--pine);font-size:12px;cursor:pointer;text-decoration:underline;padding:6px 0;
+  .route-row.visited .route-num{ background:rgba(111,174,129,0.18); color:var(--pine); }
+  .route-row.visited .route-street{ opacity:0.6; text-decoration:line-through; }
+  .route-street{ flex:1; color:var(--snow); }
+  .route-row .remove{
+    background:none; border:none; color:var(--snow-dim); font-size:18px; cursor:pointer;
+    line-height:1; padding:6px 8px; min-width:32px; min-height:32px;
   }
+  .route-row .remove:hover{ color:var(--berry); }
+  .route-gap{ font-size:11px; color:var(--snow-dim); padding:3px 0 3px 33px; }
+
+  .removed-pills{ display:flex; flex-wrap:wrap; gap:6px; margin-top:12px; }
+  .removed-pill{
+    font-size:12px; color:var(--snow-dim); background:var(--panel);
+    border:1px solid var(--line); border-radius:20px; padding:6px 12px; cursor:pointer;
+  }
+  .removed-pill:hover{ color:var(--pine); border-color:var(--pine); }
 
   .gdpr-note{font-size:11.5px;line-height:1.55;color:var(--snow-dim);display:flex;gap:8px;align-items:flex-start;}
   .gdpr-note svg{flex-shrink:0;margin-top:2px;}
 
   .foot-note{
-    margin-top:auto;
     padding-top:16px;
     border-top:1px solid var(--line);
     font-size:11.5px;
     line-height:1.6;
     color:var(--snow-dim);
   }
-
-  #map{width:100%;height:100vh;background:var(--night-deep);}
-
-  .walk-section{
-    background:var(--panel);
-    border:1px solid var(--line);
-    border-radius:10px;
-    padding:16px;
-    display:flex;
-    flex-direction:column;
-    gap:12px;
-  }
-  .walk-section h2{font-family:'Fraunces',serif;font-size:16px;font-weight:600;margin:0;color:var(--snow);}
-  .walk-btn{
-    background:var(--pine);
-    border:none;
-    color:var(--night-deep);
-    font-weight:700;
-    font-size:14px;
-    padding:12px 16px;
-    min-height:46px;
-    border-radius:8px;
-    cursor:pointer;
-  }
-  .walk-btn.stopping{background:var(--berry); color:var(--snow);}
-  .walk-status{
-    font-size:13px;
-    color:var(--amber);
-    background:var(--amber-soft);
-    border-radius:8px;
-    padding:9px 11px;
-    display:none;
-  }
-  .walk-status.active{display:block;}
-
-  .gmaps-links{display:flex; flex-direction:column; gap:8px;}
-  .gmaps-btn{
-    display:flex; align-items:center; justify-content:center; gap:8px;
-    background:transparent;
-    border:1px solid rgba(242,184,75,0.4);
-    color:var(--amber);
-    text-decoration:none;
-    font-size:13px;
-    font-weight:600;
-    padding:10px 12px;
-    min-height:44px;
-    border-radius:8px;
-  }
-  .gmaps-btn:hover{background:var(--amber-soft);}
-  .gmaps-note{font-size:11.5px;color:var(--snow-dim);line-height:1.5;margin:0;}
 
   .toast{
     position:fixed; left:50%; bottom:26px; transform:translateX(-50%) translateY(20px);
@@ -264,9 +293,6 @@
   }
   @keyframes pulse{ 0%{transform:scale(0.6); opacity:1;} 100%{transform:scale(2.2); opacity:0;} }
 
-  .house-row.visited{opacity:0.5;}
-  .house-row.visited .street::after{content:" ✓"; color:var(--pine);}
-
   .leaflet-popup-content-wrapper{background:var(--panel);color:var(--snow);border-radius:8px;}
   .leaflet-popup-content{font-family:'Inter';font-size:13px;margin:10px 12px;}
   .leaflet-popup-content b{font-family:'Fraunces',serif;font-size:15px;}
@@ -280,73 +306,79 @@
 <div class="snow" id="snow"></div>
 <div class="toast" id="toast"></div>
 
-<div class="app">
-  <div class="panel">
-    <div class="brand-mark">
-      <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M12 2v5M12 17v5M4.2 4.2l3.5 3.5M16.3 16.3l3.5 3.5M2 12h5M17 12h5M4.2 19.8l3.5-3.5M16.3 7.7l3.5-3.5" stroke="#F2B84B" stroke-width="1.6" stroke-linecap="round"/><circle cx="12" cy="12" r="3" fill="#F2B84B"/></svg>
-      <span>JEAVONS WOOD PTA</span>
-    </div>
-    <div class="lights-string"></div>
+<div class="page">
 
-    <div>
-      <h1>The Christmas<br>Lights <em>Trail</em></h1>
-      <p class="lede">There's nothing quite like turning a corner and finding a whole house lit up for Christmas — kids pointing, breath fogging in the cold, that proper feeling that Christmas is nearly here. This year our neighbours have pulled out all the stops, and we've mapped every home taking part. Walk the whole trail, or just the bit near you — it's free, it's for everyone, and it raises money for our school.</p>
-    </div>
+  <div class="brand-mark">
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M12 2v5M12 17v5M4.2 4.2l3.5 3.5M16.3 16.3l3.5 3.5M2 12h5M17 12h5M4.2 19.8l3.5-3.5M16.3 7.7l3.5-3.5" stroke="#F2B84B" stroke-width="1.6" stroke-linecap="round"/><circle cx="12" cy="12" r="3" fill="#F2B84B"/></svg>
+    <span>JEAVONS WOOD PTA</span>
+  </div>
+  <div class="lights-string"></div>
 
-    <div class="donate">
-      <p>Enjoyed the walk? <b>A small donation</b> goes straight to Jeavons Wood School.</p>
-      <a href="#" target="_blank">Donate</a>
-    </div>
+  <div>
+    <h1>The Christmas<br>Lights <em>Trail</em></h1>
+    <p class="lede">There's nothing quite like turning a corner and finding a whole house lit up for Christmas — kids pointing, breath fogging in the cold, that proper feeling that Christmas is nearly here. This year our neighbours have pulled out all the stops, and we've mapped every home taking part. Walk the whole trail, or just the bit near you — it's free, it's for everyone, and it raises money for our school.</p>
+  </div>
 
-    <div class="stat-row">
-      <div class="stat"><b>34</b><span>homes taking part</span></div>
-      <div class="stat"><b>Free</b><span>to walk, every night</span></div>
-      <div class="stat"><b>Dec</b><span>lit through the month</span></div>
-    </div>
+  <div class="map-card" id="mapCard">
+    <div id="map"></div>
+    <button class="map-expand-btn" id="mapExpandBtn">⤢ Expand map</button>
+  </div>
 
-    <div>
-      <label class="field-label">Start near your house</label>
-      <div class="address-row">
-        <input id="addr" type="text" placeholder="e.g. Aspen Grove">
-        <button class="go" id="findBtn">Go</button>
-      </div>
-    </div>
+  <div>
+    <a href="#" id="primaryGmapsBtn" class="primary-cta" target="_blank" rel="noopener">Get walking directions</a>
+    <p class="cta-sub">Opens in Google Maps — voice directions, live rerouting, all of it.</p>
+    <div class="more-legs" id="moreLegs"></div>
+  </div>
 
-    <div class="walk-section">
-      <h2>Walk the trail</h2>
-      <button class="walk-btn" id="walkBtn">▶ Start walking</button>
-      <div class="walk-status" id="walkStatus"></div>
-      <p class="gmaps-note">Prefer your phone's own sat nav? Open the same stops in Google Maps instead — voice directions, live rerouting, all of it.</p>
-      <div class="gmaps-links" id="gmapsLinks"></div>
-    </div>
+  <div class="walk-section">
+    <h2>Or follow along right here</h2>
+    <p class="gmaps-note">Stay on this page and we'll track you live — no app switching, houses tick off as you pass them.</p>
+    <button class="walk-btn" id="walkBtn">▶ Start walking</button>
+    <div class="walk-status" id="walkStatus"></div>
+  </div>
 
-    <div>
-      <div class="trail-head">
-        <h2>Your trail</h2>
-        <div class="trail-head-actions">
-          <button class="reset-link" id="toggleList">Show list</button>
-          <button class="reset-link" id="resetBtn">Reset to full trail</button>
-        </div>
-      </div>
-      <p style="font-size:12px;color:var(--snow-dim);margin:6px 0 10px 0;">Too far to walk to one? Remove it and we'll redraw the route.</p>
-      <div class="house-list" id="houseList"></div>
-    </div>
+  <div class="donate">
+    <p>Enjoyed the walk? <b>A small donation</b> goes straight to Jeavons Wood School.</p>
+    <a href="#" target="_blank">Donate</a>
+  </div>
 
-    <div class="gdpr-note">
-      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" style="margin-top:2px;"><path d="M12 2 3 6v6c0 5 3.8 8.7 9 10 5.2-1.3 9-5 9-10V6l-9-4z" stroke="#F5F7FA" stroke-opacity="0.5" stroke-width="1.4"/></svg>
-      <span>To protect residents' privacy, we only ever show street names publicly — never house numbers. The pin still marks the right spot to stop and look.</span>
-    </div>
+  <div class="stat-row">
+    <div class="stat"><b>34</b><span>homes taking part</span></div>
+    <div class="stat"><b>Free</b><span>to walk, every night</span></div>
+    <div class="stat"><b>Dec</b><span>lit through the month</span></div>
+  </div>
 
-    <div class="foot-note">
-      Want to add your own lights to next year's trail? Get in touch with the PTA committee.
+  <div>
+    <label class="field-label">Start near your house</label>
+    <div class="address-row">
+      <input id="addr" type="text" placeholder="e.g. Aspen Grove">
+      <button class="go" id="findBtn">Go</button>
     </div>
   </div>
 
-  <div id="map"></div>
+  <div>
+    <div class="trail-head">
+      <h2>Your trail</h2>
+      <button class="reset-link" id="resetBtn">Reset to full trail</button>
+    </div>
+    <p style="font-size:12px;color:var(--snow-dim);margin:6px 0 10px 0;">Too far to walk to one? Remove it — the route and directions update automatically.</p>
+    <div class="route-list" id="houseList"></div>
+    <div class="removed-pills" id="removedPills"></div>
+  </div>
+
+  <div class="gdpr-note">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" style="margin-top:2px;"><path d="M12 2 3 6v6c0 5 3.8 8.7 9 10 5.2-1.3 9-5 9-10V6l-9-4z" stroke="#F5F7FA" stroke-opacity="0.5" stroke-width="1.4"/></svg>
+    <span>To protect residents' privacy, we only ever show street names publicly — never house numbers. The pin still marks the right spot to stop and look.</span>
+  </div>
+
+  <div class="foot-note">
+    Want to add your own lights to next year's trail? Get in touch with the PTA committee.
+  </div>
+
 </div>
 
-<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-<script src="https://unpkg.com/leaflet-routing-machine@3.2.12/dist/leaflet-routing-machine.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/leaflet-routing-machine@3.2.12/dist/leaflet-routing-machine.js"></script>
 <script>
   // ---- Live data source ----
   // Publish the "Public" tab of your Sheet as CSV (File → Share → Publish to web → CSV)
@@ -355,52 +387,53 @@
   // never the full address — even though the pin itself is exact.
   const SHEET_CSV_URL = "PASTE_YOUR_PUBLISHED_CSV_LINK_HERE";
 
-  const CENTER = [53.7520, -2.9970];
+  const CENTER = [52.2154, -0.0575];
 
   // Used only if the CSV above isn't reachable (e.g. previewing this file offline)
+  // Real Cambourne street names, scattered around the village for a locally-familiar demo.
   const sampleLights = [
-    {id:1,  street:"Aspen Grove",   lat:53.7538, lng:-2.9995},
-    {id:2,  street:"Aspen Grove",   lat:53.7540, lng:-2.9989},
-    {id:3,  street:"Birchfield Road",  lat:53.7534, lng:-2.9978},
-    {id:4,  street:"Birchfield Road",  lat:53.7530, lng:-2.9970},
-    {id:5,  street:"Cedar Close",   lat:53.7525, lng:-2.9960},
-    {id:6,  street:"Cedar Close",    lat:53.7522, lng:-2.9952},
-    {id:7,  street:"Cedar Close",    lat:53.7518, lng:-2.9946},
-    {id:8,  street:"Elm Avenue",    lat:53.7514, lng:-2.9938},
-    {id:9,  street:"Fir Tree Lane",  lat:53.7545, lng:-2.9935},
-    {id:10, street:"Fir Tree Lane", lat:53.7550, lng:-2.9928},
-    {id:11, street:"Fir Tree Lane", lat:53.7554, lng:-2.9918},
-    {id:12, street:"Gorse Way",      lat:53.7548, lng:-2.9908},
-    {id:13, street:"Gorse Way",      lat:53.7542, lng:-2.9899},
-    {id:14, street:"Hazel Court",    lat:53.7536, lng:-2.9892},
-    {id:15, street:"Hazel Court",    lat:53.7529, lng:-2.9886},
-    {id:16, street:"Ivy Street",    lat:53.7522, lng:-2.9880},
-    {id:17, street:"Ivy Street",     lat:53.7515, lng:-2.9878},
-    {id:18, street:"Juniper Road",    lat:53.7508, lng:-2.9885},
-    {id:19, street:"Larch Street",  lat:53.7500, lng:-2.9900},
-    {id:20, street:"Larch Street",   lat:53.7494, lng:-2.9912},
-    {id:21, street:"Maple Drive",   lat:53.7490, lng:-2.9925},
-    {id:22, street:"Maple Drive",    lat:53.7495, lng:-2.9940},
-    {id:23, street:"Nutwood Avenue",   lat:53.7501, lng:-2.9955},
-    {id:24, street:"Nutwood Avenue",    lat:53.7507, lng:-2.9965},
-    {id:25, street:"Oakfield Road",   lat:53.7512, lng:-2.9980},
-    {id:26, street:"Oakfield Road",    lat:53.7505, lng:-2.9990},
-    {id:27, street:"Pine Walk",      lat:53.7498, lng:-2.9998},
-    {id:28, street:"Pine Walk",      lat:53.7492, lng:-3.0005},
-    {id:29, street:"Quince Lane",   lat:53.7486, lng:-3.0012},
-    {id:30, street:"Rowan Close",   lat:53.7480, lng:-3.0002},
-    {id:31, street:"Rowan Close",    lat:53.7477, lng:-2.9988},
-    {id:32, street:"Sycamore Street",   lat:53.7483, lng:-2.9975},
-    {id:33, street:"Sycamore Street",    lat:53.7489, lng:-2.9962},
-    {id:34, street:"Thistle Road",    lat:53.7495, lng:-2.9950}
+    {id:1,  street:"Brace Dein",     lat:52.217224, lng:-0.059985},
+    {id:2,  street:"Brace Dein",     lat:52.217424, lng:-0.059385},
+    {id:3,  street:"Bramble Court",  lat:52.216824, lng:-0.058285},
+    {id:4,  street:"Bramble Court",  lat:52.216424, lng:-0.057485},
+    {id:5,  street:"Bristol Drive",  lat:52.215924, lng:-0.056485},
+    {id:6,  street:"Bristol Drive",  lat:52.215624, lng:-0.055685},
+    {id:7,  street:"Bristol Drive",  lat:52.215224, lng:-0.055085},
+    {id:8,  street:"Broad Street",   lat:52.214824, lng:-0.054285},
+    {id:9,  street:"Brookfield Way", lat:52.217924, lng:-0.053985},
+    {id:10, street:"Brookfield Way", lat:52.218424, lng:-0.053285},
+    {id:11, street:"Brookfield Way", lat:52.218824, lng:-0.052285},
+    {id:12, street:"Bucksherd Close",lat:52.218224, lng:-0.051285},
+    {id:13, street:"Bucksherd Close",lat:52.217624, lng:-0.050385},
+    {id:14, street:"Bullrush Lane",  lat:52.217024, lng:-0.049685},
+    {id:15, street:"Bullrush Lane",  lat:52.216324, lng:-0.049085},
+    {id:16, street:"Butler Walk",    lat:52.215624, lng:-0.048485},
+    {id:17, street:"Butler Walk",    lat:52.214924, lng:-0.048285},
+    {id:18, street:"Cambourne Road", lat:52.214224, lng:-0.048985},
+    {id:19, street:"Chaffinch Walk", lat:52.213424, lng:-0.050485},
+    {id:20, street:"Chaffinch Walk", lat:52.212824, lng:-0.051685},
+    {id:21, street:"Chapmans Drive", lat:52.212424, lng:-0.052985},
+    {id:22, street:"Chapmans Drive", lat:52.212924, lng:-0.054485},
+    {id:23, street:"Cherry Court",   lat:52.213524, lng:-0.055985},
+    {id:24, street:"Cherry Court",   lat:52.214124, lng:-0.056985},
+    {id:25, street:"Chervil Way",    lat:52.214624, lng:-0.058485},
+    {id:26, street:"Chervil Way",    lat:52.213924, lng:-0.059485},
+    {id:27, street:"Acorn Lane",     lat:52.213224, lng:-0.060285},
+    {id:28, street:"Acorn Lane",     lat:52.212624, lng:-0.060985},
+    {id:29, street:"Akerly Drive",   lat:52.212024, lng:-0.061685},
+    {id:30, street:"Albermarle Road",lat:52.211424, lng:-0.060685},
+    {id:31, street:"Albermarle Road",lat:52.211124, lng:-0.059285},
+    {id:32, street:"Alder Drive",    lat:52.211724, lng:-0.057985},
+    {id:33, street:"Alder Drive",    lat:52.212324, lng:-0.056685},
+    {id:34, street:"Anson Road",     lat:52.212924, lng:-0.055485}
   ];
 
   let lights = [];
   let removedIds = new Set();
+  let visitedIds = new Set();
 
   function parseCSV(text){
     const lines = text.trim().split('\n');
-    // Skip header row, expect: street,lat,lng
     return lines.slice(1).map((line, i) => {
       const cols = line.split(',').map(c => c.trim().replace(/^"|"$/g, ''));
       return { id: i + 1, street: cols[0], lat: parseFloat(cols[1]), lng: parseFloat(cols[2]) };
@@ -425,18 +458,14 @@
   }
 
   const map = L.map('map', { zoomControl:true }).setView(CENTER, 15);
-  L.tileLayer('https://services.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}', {
-    attribution: 'Esri, HERE, Garmin, &copy; OpenStreetMap contributors',
-    maxZoom: 16
-  }).addTo(map);
-  L.tileLayer('https://services.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Reference/MapServer/tile/{z}/{y}/{x}', {
-    maxZoom: 16
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    attribution: '&copy; OpenStreetMap contributors',
+    maxZoom: 19
   }).addTo(map);
 
   let markers = [];
   let markersById = {};
   let routingControl = null;
-  let visitedIds = new Set();
 
   function activeLights(){
     return lights.filter(l => !removedIds.has(l.id));
@@ -478,6 +507,10 @@
     return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
   }
 
+  function formatDist(m){
+    return m < 1000 ? `${Math.round(m)}m` : `${(m/1000).toFixed(1)}km`;
+  }
+
   function showToast(msg){
     const t = document.getElementById('toast');
     t.textContent = msg;
@@ -515,7 +548,8 @@
       markersById[p.id] = m;
     });
 
-    renderGoogleMapsLinks(pts);
+    updateDirectionsUI(pts);
+    renderRouteList();
 
     if(pts.length < 2) return;
 
@@ -525,7 +559,7 @@
     routingControl = L.Routing.control({
       waypoints: waypoints,
       router: L.Routing.osrmv1({ serviceUrl: 'https://router.project-osrm.org/route/v1', profile: 'foot' }),
-      lineOptions: { styles: [{color: '#F2B84B', opacity: 0.9, weight: 4}] },
+      lineOptions: { styles: [{color: '#2F6FED', opacity: 0.85, weight: 5}] },
       addWaypoints: false,
       draggableWaypoints: false,
       fitSelectedRoutes: true,
@@ -555,72 +589,109 @@
     return links;
   }
 
-  function renderGoogleMapsLinks(pts){
-    const container = document.getElementById('gmapsLinks');
-    container.innerHTML = '';
+  function updateDirectionsUI(pts){
+    const primaryBtn = document.getElementById('primaryGmapsBtn');
+    const moreLegs = document.getElementById('moreLegs');
+    moreLegs.innerHTML = '';
+
     if(pts.length < 2){
-      container.innerHTML = '<p class="gmaps-note">Add at least two houses to your trail to open it in Google Maps.</p>';
+      primaryBtn.href = '#';
+      primaryBtn.textContent = 'Add at least two houses for directions';
+      primaryBtn.style.opacity = '0.5';
+      primaryBtn.style.pointerEvents = 'none';
       return;
     }
+    primaryBtn.style.opacity = '';
+    primaryBtn.style.pointerEvents = '';
+
     const ordered = nearestNeighbourOrder(pts);
     const links = buildGoogleMapsLinks(ordered);
-    links.forEach((url, i) => {
+
+    primaryBtn.href = links[0];
+    primaryBtn.textContent = links.length > 1 ? 'Get walking directions (Leg 1)' : 'Get walking directions';
+
+    links.slice(1).forEach((url, i) => {
       const a = document.createElement('a');
       a.href = url;
       a.target = '_blank';
       a.rel = 'noopener';
       a.className = 'gmaps-btn';
-      a.textContent = links.length > 1 ? `Open Leg ${i+1} of ${links.length} in Google Maps` : 'Open in Google Maps';
-      container.appendChild(a);
+      a.textContent = `Continue with Leg ${i+2} of ${links.length}`;
+      moreLegs.appendChild(a);
     });
   }
 
-  function renderHouseList(){
+  // ---- Numbered route list with distances ----
+  function renderRouteList(){
+    const activePts = activeLights();
+    const ordered = nearestNeighbourOrder(activePts);
     const list = document.getElementById('houseList');
     list.innerHTML = '';
-    lights.forEach(l => {
+
+    ordered.forEach((l, i) => {
+      const visited = visitedIds.has(l.id);
       const row = document.createElement('div');
-      const visited = visitedIds.has(l.id) && !removedIds.has(l.id);
-      row.className = 'house-row' + (removedIds.has(l.id) ? ' removed' : '') + (visited ? ' visited' : '');
-      row.innerHTML = removedIds.has(l.id)
-        ? `<span class="street">${l.street}</span><button class="add-back" data-id="${l.id}">add back</button>`
-        : `<span class="street">${l.street}</span><button class="remove" data-id="${l.id}" title="Remove from my trail">&times;</button>`;
+      row.className = 'route-row' + (visited ? ' visited' : '');
+      row.innerHTML = `
+        <div class="route-num">${visited ? '&#10003;' : i + 1}</div>
+        <div class="route-street">${l.street}</div>
+        <button class="remove" data-id="${l.id}" title="Remove from my trail">&times;</button>
+      `;
       list.appendChild(row);
+
+      if(i < ordered.length - 1){
+        const gap = document.createElement('div');
+        gap.className = 'route-gap';
+        gap.textContent = '↓ ' + formatDist(distMeters(l.lat, l.lng, ordered[i+1].lat, ordered[i+1].lng));
+        list.appendChild(gap);
+      }
     });
 
     list.querySelectorAll('.remove').forEach(btn => {
       btn.addEventListener('click', () => {
         removedIds.add(Number(btn.dataset.id));
-        renderHouseList();
         drawRoute();
       });
     });
-    list.querySelectorAll('.add-back').forEach(btn => {
-      btn.addEventListener('click', () => {
-        removedIds.delete(Number(btn.dataset.id));
-        renderHouseList();
+
+    renderRemovedPills();
+  }
+
+  function renderRemovedPills(){
+    const container = document.getElementById('removedPills');
+    container.innerHTML = '';
+    lights.filter(l => removedIds.has(l.id)).forEach(l => {
+      const pill = document.createElement('button');
+      pill.className = 'removed-pill';
+      pill.textContent = `+ ${l.street}`;
+      pill.title = 'Add back to my trail';
+      pill.addEventListener('click', () => {
+        removedIds.delete(l.id);
         drawRoute();
       });
+      container.appendChild(pill);
     });
   }
 
   document.getElementById('resetBtn').addEventListener('click', () => {
     removedIds.clear();
-    renderHouseList();
     drawRoute();
-  });
-
-  const toggleListBtn = document.getElementById('toggleList');
-  toggleListBtn.addEventListener('click', () => {
-    const el = document.getElementById('houseList');
-    el.classList.toggle('open');
-    toggleListBtn.textContent = el.classList.contains('open') ? 'Hide list' : 'Show list';
   });
 
   document.getElementById('findBtn').addEventListener('click', () => {
     // Prototype behaviour: re-centres on the sample area.
     // Real build: geocode the typed street with a free geocoder and fly there.
     map.flyTo(CENTER, 15.3, { duration: 1.1 });
+  });
+
+  // ---- Expand / collapse the map preview ----
+  const mapCard = document.getElementById('mapCard');
+  const mapExpandBtn = document.getElementById('mapExpandBtn');
+  mapExpandBtn.addEventListener('click', () => {
+    mapCard.classList.toggle('expanded');
+    const expanded = mapCard.classList.contains('expanded');
+    mapExpandBtn.textContent = expanded ? '✕ Close map' : '⤢ Expand map';
+    setTimeout(() => map.invalidateSize(), 150);
   });
 
   // ---- Walking mode: live location following + proximity check-off ----
@@ -635,7 +706,7 @@
 
   function startWalking(){
     if(!navigator.geolocation){
-      showToast('This browser can\'t share your location — try Chrome or Safari.');
+      showToast("This browser can't share your location — try Chrome or Safari.");
       return;
     }
     walking = true;
@@ -694,7 +765,7 @@
     if(nearestDist < 25){
       visitedIds.add(nearest.id);
       showToast(`🎄 You found the lights at ${nearest.street}!`);
-      renderHouseList();
+      renderRouteList();
       if(markersById[nearest.id]) markersById[nearest.id].setIcon(visitedIcon());
     }
   }
@@ -724,7 +795,6 @@
   makeSnow();
 
   loadLights().then(() => {
-    renderHouseList();
     drawRoute();
   });
 </script>
